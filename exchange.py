@@ -24,6 +24,24 @@ exchange.py p 50
 import json
 import requests
 import sys
+import datetime
+
+def getRates():
+    """Get the current conversion rates from the online API    
+
+    Returns: json object with the data
+    """
+
+    api = "https://api.currencyapi.com/v3/latest?apikey=cur_live_VoiSjxU2rbs7JxXjGtzbjcfYdk4jVS1fHXPIQr03&currencies=EUR&base_currency=GBP"
+    
+    # Connect to the API
+    print("Connecting to the api...")
+    resp = requests.get(api)
+    if(resp.status_code != 200):            
+        print("Error connecting to the API!")
+        exit()
+    return json.loads(resp.text)
+
 
 def convert(cur, val):    
     """Currency conversion
@@ -35,20 +53,41 @@ def convert(cur, val):
         Currency for the supplied value. 'e' for EUR and 'p' for GBP
     val : float
         The value to convert
+
+    Returns: the converted value
     """
 
-    api = "https://api.currencyapi.com/v3/latest?apikey=cur_live_VoiSjxU2rbs7JxXjGtzbjcfYdk4jVS1fHXPIQr03&currencies=EUR&base_currency=GBP"
-    #tmp = '{  "meta": {    "last_updated_at": "2024-06-08T23:59:59Z"  },  "data": {    "EUR": {      "code": "EUR",      "value": 1.1774525048    }  }}'
-    
-    # Connect to the API
-    resp = requests.get(api)
+    # Check if we have a local json file with up-to-date conversion values.
 
-    if(resp.status_code != 200):            
-        print("Error connecting to the API!")
-        return False
+    try:
+        f = open("exchange.json")
+        file_contents = f.read()
+        f.close()
+        if(file_contents == ""): # File was empty
+            print("File contained no data!")
+            raise FileNotFoundError
+        
+        file_data = json.loads(file_contents)
+        
+        # Check if the last update was yesterday
+        # Get today's date, subtract one day from it, format to Y-m-d
+        yesterday = (datetime.datetime.now() - datetime.timedelta(1)).strftime("%Y-%m-%d")        
+        last_update = file_data["meta"]["last_updated_at"]
+
+        if(yesterday in last_update):
+            rates = file_data                    
+        else:
+            print("Conversion value is out of date. Updating...")
+            raise FileNotFoundError
+        
+    except FileNotFoundError: # File was empty or not found, or data was not current, create a new file       
+        rates = getRates()
+        f = open("exchange.json", "w")
+        f.write(str(rates).replace("\'","\""))
+        f.close()
     
-    # Load json data
-    rates = json.loads(resp.text)
+
+    # Get the current rate and use it to calculate and return the requested value
     r = float(rates["data"]["EUR"]["value"])
     if(cur == "p"):    
         return format(float(val)*r, ".2f")
