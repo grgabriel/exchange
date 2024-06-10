@@ -26,13 +26,24 @@ import requests
 import sys
 import datetime
 
-def getRates():
+api_key_file = "/home/corian/utils/exchange/api.key"
+json_key_file = "/home/corian/utils/exchange/exchange.json"
+
+def get_rates():
     """Get the current conversion rates from the online API    
 
     Returns: json object with the data
     """
 
-    api = "https://api.currencyapi.com/v3/latest?apikey=cur_live_VoiSjxU2rbs7JxXjGtzbjcfYdk4jVS1fHXPIQr03&currencies=EUR&base_currency=GBP"
+    try:
+        f = open(api_key_file)
+        api_key = f.read()          
+        f.close()
+    except FileNotFoundError:
+        print("Could not open API key file. Exiting")    
+        exit()
+
+    api = "https://api.currencyapi.com/v3/latest?apikey=" + api_key + "&currencies=EUR&base_currency=GBP"
     
     # Connect to the API
     print("Connecting to the api...")
@@ -60,7 +71,7 @@ def convert(cur, val):
     # Check if we have a local json file with up-to-date conversion values.
 
     try:
-        f = open("exchange.json")
+        f = open(json_key_file)
         file_contents = f.read()
         f.close()
         if(file_contents == ""): # File was empty
@@ -81,10 +92,14 @@ def convert(cur, val):
             raise FileNotFoundError
         
     except FileNotFoundError: # File was empty or not found, or data was not current, create a new file       
-        rates = getRates()
-        f = open("exchange.json", "w")
-        f.write(str(rates).replace("\'","\""))
-        f.close()
+        rates = get_rates()
+        try:
+            f = open(json_key_file, "w")
+            f.write(str(rates).replace("\'","\""))
+            f.close()
+        except:
+            print("Could not write data to file")
+            exit()
     
 
     # Get the current rate and use it to calculate and return the requested value
