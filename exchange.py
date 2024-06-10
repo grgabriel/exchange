@@ -26,11 +26,13 @@ import requests
 import sys
 import datetime
 
-api_key_file = "/home/corian/utils/exchange/api.key"
-json_key_file = "/home/corian/utils/exchange/exchange.json"
+api_key_file = "/home/corian/utils/exchange/api.key" # File that holds the API key
+json_file = "/home/corian/utils/exchange/exchange.json" # File that holds last fetched data
 
 def get_rates():
     """Get the current conversion rates from the online API    
+
+    This function will load the API key from a specified file and connect to the API to fetch up-to-date currency conversion data
 
     Returns: json object with the data
     """
@@ -40,7 +42,7 @@ def get_rates():
         api_key = f.read()          
         f.close()
     except FileNotFoundError:
-        print("Could not open API key file. Exiting")    
+        print("Could not open API key file. Make sure you have your API key set up. Exiting")    
         exit()
 
     api = "https://api.currencyapi.com/v3/latest?apikey=" + api_key + "&currencies=EUR&base_currency=GBP"
@@ -71,7 +73,7 @@ def convert(cur, val):
     # Check if we have a local json file with up-to-date conversion values.
 
     try:
-        f = open(json_key_file)
+        f = open(json_file)
         file_contents = f.read()
         f.close()
         if(file_contents == ""): # File was empty
@@ -94,7 +96,7 @@ def convert(cur, val):
     except FileNotFoundError: # File was empty or not found, or data was not current, create a new file       
         rates = get_rates()
         try:
-            f = open(json_key_file, "w")
+            f = open(json_file, "w")
             f.write(str(rates).replace("\'","\""))
             f.close()
         except:
